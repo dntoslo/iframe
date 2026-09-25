@@ -40,19 +40,15 @@
 <body>
   <header>
     <h1>Test av iframe</h1>
-    <a href="https://claude.ai/artifact/8ucvmbQXv1xERtdn2a9224" target="_blank" rel="noopener noreferrer">Åpne artifacten i egen fane</a>
+    <a href="https://claude.ai/artifact/T4bACkzpoaJA6Xpu8yNDMc?sk=jyiiD8OXnsOkr0R2TMwMAQ" target="_blank" rel="noopener noreferrer">Åpne artifacten i egen fane</a>
   </header>
-  <!--
-    claude.ai sender Content-Security-Policy: frame-ancestors 'self', så artifacten
-    kan ikke lastes direkte i en iframe fra et annet domene. Derfor ligger en kopi
-    av artifact-HTML-en i kalkulator.html og vises herfra.
-  -->
   <iframe
-    src="kalkulator.html"
-    title="Kalkulator (kopi av Claude-artifact)"
+    src="https://claude.ai/artifact/T4bACkzpoaJA6Xpu8yNDMc?sk=jyiiD8OXnsOkr0R2TMwMAQ"
+    title="Kalkulator (Claude-artifact)"
     allow="clipboard-write"
-    loading="eager">
+    loading="eager"
+    referrerpolicy="no-referrer-when-downgrade">
   </iframe>
-  <p class="fallback">Kopi av artifacten. Historikk og filopplasting virker bare i minnet her, siden Claude sitt lagrings-runtime ikke finnes utenfor claude.ai.</p>
+  <p class="fallback">Vises ikke innholdet over, blokkerer claude.ai innbygging i iframe. Bruk lenken øverst, eller <a href="kalkulator.html">kopien i repoet</a>.</p>
 </body>
 </html>
