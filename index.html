@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="nb">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Test av iframe</title>
+  <style>
+    html, body { height: 100%; margin: 0; }
+    body {
+      display: flex;
+      flex-direction: column;
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      background: #f3f4f6;
+      color: #1f2937;
+    }
+    header {
+      padding: 0.75rem 1rem;
+      background: #ffffff;
+      border-bottom: 1px solid #e5e7eb;
+      display: flex;
+      align-items: baseline;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    header h1 { font-size: 1.1rem; margin: 0; }
+    header a { color: #2f5d5a; }
+    iframe {
+      flex: 1;
+      width: 100%;
+      border: 0;
+      background: #ffffff;
+    }
+    .fallback {
+      padding: 1rem;
+      font-size: 0.9rem;
+      color: #6b7280;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Test av iframe</h1>
+    <a href="https://claude.ai/artifact/8ucvmbQXv1xERtdn2a9224" target="_blank" rel="noopener noreferrer">Åpne artifacten i egen fane</a>
+  </header>
+  <iframe
+    src="https://claude.ai/artifact/8ucvmbQXv1xERtdn2a9224"
+    title="Kalkulator (Claude-artifact)"
+    allow="clipboard-write"
+    loading="eager"
+    referrerpolicy="no-referrer-when-downgrade">
+  </iframe>
+  <p class="fallback">Vises ikke innholdet over, blokkerer claude.ai innbygging i iframe, eller du må være logget inn. Bruk lenken øverst.</p>
+</body>
+</html>
