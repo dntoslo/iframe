@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="nb">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kalkulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    --bg: #dfe6e3;
+    --body: #f6f8f7;
+    --screen: #1f3a3d;
+    --screen-text: #eef3f1;
+    --screen-dim: #9fb5b0;
+    --key: #ffffff;
+    --key-text: #1f3a3d;
+    --key-fn: #e8eeec;
+    --op: #2f5d5a;
+    --op-text: #ffffff;
+    --eq: #c8472b;
+    --eq-text: #ffffff;
+    --edge: #c9d3cf;
+    --focus: #c8472b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #121c1d;
+      --body: #1c2a2b;
+      --screen: #0c1415;
+      --screen-text: #eef3f1;
+      --screen-dim: #7f9692;
+      --key: #283a3b;
+      --key-text: #e6eeeb;
+      --key-fn: #324748;
+      --op: #3f7a75;
+      --op-text: #ffffff;
+      --eq: #d9583b;
+      --eq-text: #ffffff;
+      --edge: #0e1718;
+      --focus: #f08a6f;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #121c1d;
+    --body: #1c2a2b;
+    --screen: #0c1415;
+    --screen-text: #eef3f1;
+    --screen-dim: #7f9692;
+    --key: #283a3b;
+    --key-text: #e6eeeb;
+    --key-fn: #324748;
+    --op: #3f7a75;
+    --op-text: #ffffff;
+    --eq: #d9583b;
+    --eq-text: #ffffff;
+    --edge: #0e1718;
+    --focus: #f08a6f;
+  }
+  *, *::before, *::after { box-sizing: inherit; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg);
+    font-family: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+    color: var(--key-text);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.25rem 1rem 2rem;
+    min-height: 100%;
+  }
+  .tabs {
+    display: flex;
+    gap: 0.25rem;
+    background: var(--body);
+    padding: 0.3rem;
+    border-radius: 999px;
+    box-shadow: 0 1px 0 var(--edge);
+  }
+  .tabs button {
+    aspect-ratio: auto;
+    font-size: 0.95rem;
+    padding: 0.5rem 1rem;
+    background: transparent;
+    box-shadow: none;
+  }
+  .tabs button[aria-selected="true"] { background: var(--op); color: var(--op-text); }
+  .tabs button:active { transform: none; }
+  [hidden] { display: none !important; }
+  .panel {
+    width: 100%;
+    max-width: 22rem;
+    background: var(--body);
+    border-radius: 1.75rem;
+    padding: 1.25rem;
+    box-shadow: 0 1px 0 var(--edge), 0 18px 40px -20px rgba(15, 35, 36, 0.45);
+  }
+  .panel.wide { max-width: 46rem; }
+  .workspace {
+    width: 100%;
+    max-width: 22rem;
+    display: grid;
+    gap: 1rem;
+  }
+  .workspace .calc { max-width: none; }
+  .history-panel { max-width: none; display: flex; flex-direction: column; }
+  .history-scroll { max-height: 22rem; overflow-y: auto; margin: 0 -0.4rem; padding: 0 0.4rem; }
+  .history-panel .text-btn { align-self: flex-start; }
+  .image-panel { max-width: none; }
+  .gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+    gap: 0.9rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .gallery li {
+    background: var(--key);
+    border-radius: 1rem;
+    overflow: hidden;
+    box-shadow: 0 1px 0 var(--edge);
+    display: flex;
+    flex-direction: column;
+  }
+  .gallery li.current { outline: 3px solid var(--op); outline-offset: -3px; }
+  .thumb {
+    aspect-ratio: 4 / 3;
+    border-radius: 0;
+    padding: 0;
+    background: var(--key-fn);
+    box-shadow: none;
+    display: block;
+    width: 100%;
+    overflow: hidden;
+  }
+  .thumb:active { transform: none; }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .g-meta { padding: 0.6rem 0.75rem 0.2rem; font-size: 0.85rem; }
+  .g-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .g-sub { color: var(--screen-dim); font-size: 0.78rem; margin-top: 0.15rem; }
+  .g-tag { display: inline-block; font-size: 0.72rem; background: var(--op); color: var(--op-text); border-radius: 999px; padding: 0.1rem 0.5rem; margin-top: 0.3rem; }
+  .g-actions { display: flex; gap: 0.35rem; padding: 0.5rem 0.6rem 0.7rem; margin-top: auto; flex-wrap: wrap; }
+  .g-actions button {
+    aspect-ratio: auto;
+    font-size: 0.8rem;
+    padding: 0.35rem 0.7rem;
+    background: var(--key-fn);
+    box-shadow: none;
+  }
+  .lightbox {
+    position: fixed;
+    inset: 0;
+    background: rgba(8, 16, 17, 0.85);
+    display: grid;
+    place-items: center;
+    padding: calc(env(safe-area-inset-top, 0px) + 1rem) 1rem calc(env(safe-area-inset-bottom, 0px) + 1rem);
+    z-index: 10;
+  }
+  .lightbox img { max-width: 100%; max-height: 80vh; border-radius: 0.75rem; }
+  .lightbox figure { width: 100%; display: flex; flex-direction: column; align-items: center; }
+  .doc-view {
+    width: 100%;
+    max-width: 44rem;
+    max-height: 78vh;
+    overflow-y: auto;
+    background: var(--body);
+    color: var(--key-text);
+    border-radius: 0.75rem;
+    padding: 1.5rem 1.75rem;
+    text-align: left;
+    line-height: 1.6;
+    font-size: 1rem;
+  }
+  .doc-view h1, .doc-view h2, .doc-view h3 { line-height: 1.25; margin: 1.2em 0 0.4em; }
+  .doc-view h1:first-child, .doc-view h2:first-child, .doc-view h3:first-child { margin-top: 0; }
+  .doc-view pre { background: var(--key-fn); padding: 0.75rem; border-radius: 0.5rem; overflow-x: auto; }
+  .doc-view code { font-family: ui-monospace, "SFMono-Regular", Consolas, monospace; font-size: 0.9em; }
+  .doc-view table { border-collapse: collapse; display: block; overflow-x: auto; }
+  .doc-view th, .doc-view td { border: 1px solid var(--edge); padding: 0.35rem 0.6rem; }
+  .doc-view img { max-width: 100%; }
+  .doc-view a { color: inherit; }
+  .doc-view blockquote { margin: 0; padding-left: 1rem; border-left: 3px solid var(--edge); color: var(--screen-dim); }
+  .doc-plain { white-space: pre-wrap; font-family: ui-monospace, "SFMono-Regular", Consolas, monospace; font-size: 0.9rem; }
+  .md-card {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 0.7rem;
+    text-align: left;
+    background: var(--key-fn);
+    overflow: hidden;
+  }
+  .md-badge {
+    align-self: flex-start;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    background: var(--op);
+    color: var(--op-text);
+    border-radius: 0.35rem;
+    padding: 0.1rem 0.4rem;
+  }
+  .md-excerpt { font-size: 0.75rem; line-height: 1.35; color: var(--screen-dim); overflow: hidden; }
+  .recent .md-excerpt { display: none; }
+  .lightbox figure { margin: 0; text-align: center; color: #eef3f1; }
+  .lightbox figcaption { margin-top: 0.6rem; font-size: 0.9rem; }
+  .lightbox .close {
+    position: absolute;
+    top: calc(env(safe-area-inset-top, 0px) + 0.75rem);
+    right: 0.75rem;
+    aspect-ratio: 1;
+    width: 2.75rem;
+    font-size: 1.4rem;
+  }
+  .dropzone {
+    width: 100%;
+    aspect-ratio: auto;
+    min-height: 8rem;
+    border-radius: 1rem;
+    border: 2px dashed var(--edge);
+    background: var(--key-fn);
+    box-shadow: none;
+    display: grid;
+    place-items: center;
+    padding: 0.75rem;
+    font-size: 1rem;
+    color: var(--screen-dim);
+    overflow: hidden;
+  }
+  .dropzone:active { transform: none; }
+  .dropzone.drag { border-color: var(--op); background: var(--key); }
+  .dropzone.has-image { border-style: solid; background: var(--key); }
+  .dropzone:disabled { cursor: default; }
+  .dropzone img { max-width: 100%; max-height: 24rem; border-radius: 0.6rem; display: block; }
+  .drop-hint { display: flex; flex-direction: column; align-items: center; gap: 0.4rem; text-align: center; }
+  .drop-hint svg { width: 2rem; height: 2rem; }
+  .recent-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin-top: 1.1rem; }
+  .recent-head h3 { font-size: 1rem; font-weight: 600; margin: 0; }
+  .link-btn {
+    aspect-ratio: auto;
+    background: none;
+    box-shadow: none;
+    padding: 0.2rem 0;
+    font-size: 0.9rem;
+    color: var(--key-text);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .link-btn:active { transform: none; }
+  .recent {
+    list-style: none;
+    margin: 0.6rem 0 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+  }
+  .recent .thumb { border-radius: 0.6rem; aspect-ratio: 1; }
+  @media (min-width: 48rem) { .recent { grid-template-columns: repeat(6, 1fr); } }
+  @media (min-width: 48rem) {
+    .image-panel { grid-column: 1 / -1; }
+    .workspace {
+      max-width: 43rem;
+      grid-template-columns: 22rem 1fr;
+      align-items: stretch;
+    }
+    /* Historikken følger kalkulatorens høyde og ruller innvendig */
+    .history-panel { contain: size; min-height: 0; }
+    .history-scroll { flex: 1; max-height: none; min-height: 0; }
+  }
+  .panel h2 { font-size: 1.25rem; font-weight: 600; margin: 0 0 0.35rem; }
+  .muted { color: var(--screen-dim); font-size: 0.9rem; margin: 0 0 1rem; line-height: 1.45; }
+  .history { list-style: none; margin: 0; padding: 0; }
+  .history li + li { border-top: 1px solid var(--edge); }
+  .history button {
+    width: 100%;
+    aspect-ratio: auto;
+    border-radius: 0.75rem;
+    background: transparent;
+    box-shadow: none;
+    text-align: right;
+    padding: 0.7rem 0.6rem;
+    display: block;
+  }
+  .history button:hover { background: var(--key-fn); filter: none; }
+  .history .h-expr { display: block; font-size: 0.9rem; color: var(--screen-dim); }
+  .history .h-res { display: block; font-size: 1.35rem; font-variant-numeric: tabular-nums; }
+  .history .h-time { display: block; font-size: 0.75rem; color: var(--screen-dim); margin-top: 0.15rem; }
+  .empty { text-align: center; color: var(--screen-dim); padding: 2rem 0.5rem; margin: 0; }
+  .text-btn {
+    aspect-ratio: auto;
+    font-size: 0.95rem;
+    padding: 0.55rem 1rem;
+    background: var(--key-fn);
+    margin-top: 1rem;
+  }
+  .table-wrap { overflow-x: auto; border: 1px solid var(--edge); border-radius: 0.75rem; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+  caption { text-align: left; padding: 0.7rem 0.8rem; font-weight: 600; }
+  caption code { font-weight: 400; color: var(--screen-dim); }
+  th, td { text-align: left; padding: 0.55rem 0.8rem; border-top: 1px solid var(--edge); white-space: nowrap; }
+  th { background: var(--key-fn); font-weight: 600; }
+  td.num { text-align: right; }
+  .schema { margin: 1.25rem 0 0; }
+  .schema dt { font-weight: 600; margin-top: 0.6rem; }
+  .schema dd { margin: 0.1rem 0 0; color: var(--screen-dim); font-size: 0.9rem; }
+  .status { font-size: 0.85rem; color: var(--screen-dim); margin: 0.75rem 0 0; }
+  .calc {
+    width: 100%;
+    max-width: 22rem;
+    background: var(--body);
+    border-radius: 1.75rem;
+    padding: 1.25rem;
+    box-shadow: 0 1px 0 var(--edge), 0 18px 40px -20px rgba(15, 35, 36, 0.45);
+  }
+  .screen {
+    background: var(--screen);
+    border-radius: 1rem;
+    padding: 1rem 1.1rem 1.1rem;
+    margin-bottom: 1.1rem;
+    text-align: right;
+    min-height: 7.5rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    overflow: hidden;
+  }
+  .expr {
+    color: var(--screen-dim);
+    font-size: 1rem;
+    min-height: 1.4rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .value {
+    color: var(--screen-text);
+    font-size: 3rem;
+    font-weight: 500;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .value::-webkit-scrollbar { display: none; }
+  .value.error { font-size: 1.5rem; color: #f3a58f; }
+  .keys {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.6rem;
+  }
+  button {
+    font: inherit;
+    font-size: 1.4rem;
+    font-weight: 500;
+    border: 0;
+    border-radius: 999px;
+    aspect-ratio: 1;
+    background: var(--key);
+    color: var(--key-text);
+    box-shadow: 0 2px 0 var(--edge);
+    cursor: pointer;
+    transition: transform 60ms ease, filter 120ms ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  button:hover { filter: brightness(0.97); }
+  button:active, button.pressed { transform: translateY(2px); box-shadow: 0 0 0 var(--edge); }
+  button:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+  .fn { background: var(--key-fn); font-size: 1.15rem; }
+  .op { background: var(--op); color: var(--op-text); }
+  .op.active { outline: 3px solid var(--op-text); outline-offset: -6px; }
+  .eq { background: var(--eq); color: var(--eq-text); }
+  .zero { grid-column: span 2; aspect-ratio: auto; }
+  .sci {
+    aspect-ratio: auto;
+    height: 2.6rem;
+    font-size: 1.05rem;
+    background: var(--key-fn);
+    border-radius: 0.8rem;
+  }
+  .sci sup { font-size: 0.65em; }
+  @media (prefers-reduced-motion: reduce) {
+    button { transition: none; }
+  }
+</style>
+</head>
+<body>
+  <nav class="tabs" role="tablist" aria-label="Sider">
+    <button role="tab" aria-selected="true" aria-controls="page-calc" data-tab="calc">Kalkulator</button>
+    <button role="tab" aria-selected="false" aria-controls="page-images" data-tab="images">Filer</button>
+    <button role="tab" aria-selected="false" aria-controls="page-tables" data-tab="tables">Tabeller</button>
+  </nav>
+
+  <div class="workspace" id="page-calc" role="tabpanel" aria-label="Kalkulator">
+  <main class="calc" aria-label="Kalkulator">
+    <div class="screen">
+      <div class="expr" id="expr" aria-live="polite"></div>
+      <div class="value" id="value" role="status" aria-live="polite">0</div>
+    </div>
+    <div class="keys">
+      <button class="sci" data-fn="log" aria-label="Logaritme med grunntall 10">log</button>
+      <button class="sci" data-fn="ln" aria-label="Naturlig logaritme">ln</button>
+      <button class="sci" data-fn="pow10" aria-label="10 opphøyd i">10<sup>x</sup></button>
+      <button class="sci" data-fn="exp" aria-label="e opphøyd i">e<sup>x</sup></button>
+
+      <button class="fn" data-action="clear" id="clearBtn" aria-label="Nullstill">AC</button>
+      <button class="fn" data-action="sign" aria-label="Bytt fortegn">±</button>
+      <button class="fn" data-action="percent" aria-label="Prosent">%</button>
+      <button class="op" data-op="/" aria-label="Del">÷</button>
+
+      <button data-digit="7">7</button>
+      <button data-digit="8">8</button>
+      <button data-digit="9">9</button>
+      <button class="op" data-op="*" aria-label="Gange">×</button>
+
+      <button data-digit="4">4</button>
+      <button data-digit="5">5</button>
+      <button data-digit="6">6</button>
+      <button class="op" data-op="-" aria-label="Minus">−</button>
+
+      <button data-digit="1">1</button>
+      <button data-digit="2">2</button>
+      <button data-digit="3">3</button>
+      <button class="op" data-op="+" aria-label="Pluss">+</button>
+
+      <button class="zero" data-digit="0">0</button>
+      <button data-action="decimal" aria-label="Komma">,</button>
+      <button class="eq" data-action="equals" aria-label="Er lik">=</button>
+    </div>
+  </main>
+
+  <section class="panel history-panel" id="page-history" aria-label="Historikk">
+    <h2>Historikk</h2>
+    <p class="muted" id="historyNote">Trykk på en utregning for å bruke resultatet videre.</p>
+    <div class="history-scroll">
+      <ul class="history" id="historyList"></ul>
+      <p class="empty" id="historyEmpty">Ingen utregninger ennå. Regn ut noe med = eller log, så dukker det opp her.</p>
+    </div>
+    <button class="text-btn" id="clearHistory" hidden>Tøm historikk</button>
+  </section>
+
+  <section class="panel image-panel" aria-label="Last opp filer">
+    <h2>Last opp filer</h2>
+    <p class="muted" id="imgNote">Bilder og Markdown-filer lagres i artifactens fillager og vises for alle som åpner den.</p>
+    <input type="file" id="fileInput" accept="image/*,.md,.markdown,text/markdown" multiple hidden>
+    <button type="button" class="dropzone" id="dropzone" aria-describedby="imgStatus">
+      <span class="drop-hint">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="9" r="1.8"/><path d="M21 15l-5-5L5 21"/></svg>
+        <span id="dropText">Trykk her eller dra bilder og Markdown-filer hit. Du kan velge flere samtidig.</span>
+      </span>
+    </button>
+    <p class="status" id="imgStatus" role="status"></p>
+    <div id="recentWrap" hidden>
+      <div class="recent-head">
+        <h3>Siste opplastinger</h3>
+        <button type="button" class="link-btn" id="seeAll">Se alle filer</button>
+      </div>
+      <ul class="recent" id="recent"></ul>
+    </div>
+  </section>
+  </div>
+
+  <section class="panel wide" id="page-images" role="tabpanel" aria-label="Filer" hidden>
+    <h2>Filer</h2>
+    <p class="muted" id="galleryNote">Alle filer som er lastet opp, med det nyeste først. Trykk på en fil for å åpne den. Du kan slette filer du har lastet opp selv.</p>
+    <ul class="gallery" id="gallery"></ul>
+    <p class="empty" id="galleryEmpty">Ingen filer ennå. Last opp bilder eller Markdown-filer på Kalkulator-siden.</p>
+  </section>
+
+  <div class="lightbox" id="lightbox" hidden role="dialog" aria-modal="true" aria-label="Fil i full størrelse">
+    <button class="close" id="lightboxClose" aria-label="Lukk">×</button>
+    <figure>
+      <img id="lightboxImg" alt="">
+      <div class="doc-view" id="docView" hidden></div>
+      <figcaption id="lightboxCap"></figcaption>
+    </figure>
+  </div>
+
+  <section class="panel wide" id="page-tables" role="tabpanel" aria-label="Tabeller" hidden>
+    <h2>Tabellene bak</h2>
+    <p class="muted">Kalkulatoren lagrer hver utregning som en rad i databasen. Tabellen er privat, så bare du ser dine egne rader.</p>
+    <div class="table-wrap">
+      <table>
+        <caption>beregninger <code id="tablePath"></code></caption>
+        <thead>
+          <tr><th>id</th><th>uttrykk</th><th>resultat</th><th>tidspunkt</th></tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+    <p class="status" id="tableStatus"></p>
+
+    <div class="table-wrap" style="margin-top: 1.25rem;">
+      <table>
+        <caption>filer <code>bilder</code></caption>
+        <thead>
+          <tr><th>bildeId</th><th>filnavn</th><th>type</th><th>størrelse</th><th>lastet opp</th><th>lastet opp av</th></tr>
+        </thead>
+        <tbody id="galleryTableBody"></tbody>
+      </table>
+    </div>
+    <p class="status">Én rad per opplastet fil, både bilder og Markdown. Selve filene ligger i artifactens fillager, og radene peker til dem med bildeId. Tabellen heter fortsatt «bilder» i databasen, siden den ble laget før Markdown kom til. Den er felles for alle som åpner siden.</p>
+    <dl class="schema">
+      <dt>id</dt><dd>Unik nøkkel som databasen lager for hver rad.</dd>
+      <dt>uttrykk</dt><dd>Tekst. Utregningen slik den ble vist, for eksempel «12 × 3 =».</dd>
+      <dt>resultat</dt><dd>Tall. Svaret på utregningen.</dd>
+      <dt>tidspunkt</dt><dd>Tall. Når utregningen ble gjort, lagret som millisekunder siden 1970 og vist som dato og klokkeslett.</dd>
+    </dl>
+    <p class="status">De siste 200 utregningene beholdes. Eldre rader slettes automatisk.</p>
+  </section>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
+<script>
+  const valueEl = document.getElementById('value');
+  const exprEl = document.getElementById('expr');
+  const clearBtn = document.getElementById('clearBtn');
+  const opSymbols = { '+': '+', '-': '−', '*': '×', '/': '÷' };
+
+  let current = '0';       // tallet som skrives inn, som tekst med punktum
+  let previous = null;     // forrige tall
+  let operator = null;     // valgt regneart
+  let fresh = false;       // neste siffer starter et nytt tall
+  let error = false;
+  let errorMsg = '';
+  let justApplied = false; // et funksjonsresultat venter som andre tall
+
+  const fmt = new Intl.NumberFormat('nb-NO', { maximumFractionDigits: 10 });
+
+  function clean(n) {
+    return parseFloat(n.toPrecision(12));
+  }
+
+  function show(text) {
+    // Formaterer tallet som skrives inn, men beholder et komma eller nuller på slutten
+    if (error) return text;
+    const [intPart, decPart] = text.split('.');
+    const neg = intPart.startsWith('-');
+    const digits = neg ? intPart.slice(1) : intPart;
+    const grouped = fmt.format(Number(digits || '0'));
+    let out = (neg ? '−' : '') + grouped;
+    if (decPart !== undefined) out += ',' + decPart;
+    return out;
+  }
+
+  function showNumber(n) {
+    if (Math.abs(n) >= 1e15 || (Math.abs(n) < 1e-9 && n !== 0)) {
+      return n.toExponential(6).replace('.', ',').replace('-', '−');
+    }
+    return fmt.format(n).replace('-', '−');
+  }
+
+  function render() {
+    valueEl.classList.toggle('error', error);
+    valueEl.textContent = error ? errorMsg : show(current);
+    valueEl.scrollLeft = valueEl.scrollWidth;
+    exprEl.textContent = previous !== null && operator
+      ? `${showNumber(previous)} ${opSymbols[operator]}`
+      : exprEl.dataset.done || '';
+    clearBtn.textContent = current !== '0' && !fresh ? 'C' : 'AC';
+    clearBtn.setAttribute('aria-label', clearBtn.textContent === 'C' ? 'Slett tall' : 'Nullstill alt');
+    document.querySelectorAll('.op').forEach(b => {
+      b.classList.toggle('active', fresh && !justApplied && b.dataset.op === operator);
+    });
+  }
+
+  function compute(a, b, op) {
+    switch (op) {
+      case '+': return a + b;
+      case '-': return a - b;
+      case '*': return a * b;
+      case '/': return b === 0 ? null : a / b;
+    }
+    return b;
+  }
+
+  function fail(msg) {
+    error = true;
+    errorMsg = msg;
+    render();
+  }
+
+  const fnLabels = { log: 'log', ln: 'ln', pow10: '10^', exp: 'e^' };
+
+  function applyFn(name) {
+    resetIfError();
+    const x = parseFloat(current);
+    let y;
+    if (name === 'log' || name === 'ln') {
+      if (x <= 0) { fail('Logaritmen finnes bare for tall over 0'); return; }
+      y = name === 'log' ? Math.log10(x) : Math.log(x);
+    } else {
+      y = name === 'pow10' ? Math.pow(10, x) : Math.exp(x);
+      if (!isFinite(y)) { fail('Tallet ble for stort'); return; }
+    }
+    y = clean(y);
+    if (previous === null || !operator) {
+      exprEl.dataset.done = name === 'log' || name === 'ln'
+        ? `${fnLabels[name]}(${showNumber(x)}) =`
+        : `${fnLabels[name]}${showNumber(x)} =`;
+      record(exprEl.dataset.done, y);
+    }
+    current = String(y);
+    fresh = true;
+    justApplied = previous !== null && !!operator;
+    render();
+  }
+
+  function resetIfError() {
+    if (error) { error = false; current = '0'; previous = null; operator = null; fresh = false; }
+  }
+
+  function inputDigit(d) {
+    resetIfError();
+    justApplied = false;
+    exprEl.dataset.done = '';
+    if (fresh) { current = d; fresh = false; }
+    else if (current === '0') current = d;
+    else if (current === '-0') current = '-' + d;
+    else if (current.replace(/[-.]/g, '').length < 15) current += d;
+    render();
+  }
+
+  function inputDecimal() {
+    resetIfError();
+    justApplied = false;
+    exprEl.dataset.done = '';
+    if (fresh) { current = '0.'; fresh = false; }
+    else if (!current.includes('.')) current += '.';
+    render();
+  }
+
+  function chooseOperator(op) {
+    resetIfError();
+    exprEl.dataset.done = '';
+    const value = parseFloat(current);
+    if (previous !== null && operator && (!fresh || justApplied)) {
+      const result = compute(previous, value, operator);
+      if (result === null) { fail('Kan ikke dele på null'); return; }
+      previous = clean(result);
+      current = String(previous);
+    } else if (!fresh || previous === null) {
+      previous = value;
+    }
+    operator = op;
+    fresh = true;
+    justApplied = false;
+    render();
+  }
+
+  function equals() {
+    if (error || previous === null || !operator) return;
+    const b = parseFloat(current);
+    const result = compute(previous, b, operator);
+    const expression = `${showNumber(previous)} ${opSymbols[operator]} ${showNumber(b)} =`;
+    if (result === null) { fail('Kan ikke dele på null'); return; }
+    const r = clean(result);
+    exprEl.dataset.done = expression;
+    record(expression, r);
+    current = String(r);
+    previous = null;
+    operator = null;
+    fresh = true;
+    justApplied = false;
+    render();
+  }
+
+  function clearAll() {
+    justApplied = false;
+    if (clearBtn.textContent === 'C' && !error) {
+      current = '0';
+    } else {
+      current = '0'; previous = null; operator = null; fresh = false; error = false;
+      exprEl.dataset.done = '';
+    }
+    render();
+  }
+
+  function toggleSign() {
+    resetIfError();
+    if (fresh) { fresh = false; }
+    current = current.startsWith('-') ? current.slice(1) : '-' + current;
+    render();
+  }
+
+  function percent() {
+    resetIfError();
+    const v = parseFloat(current);
+    // 200 + 10 % gir 200 + 20, slik de fleste lommekalkulatorer gjør
+    const p = previous !== null && (operator === '+' || operator === '-')
+      ? previous * v / 100
+      : v / 100;
+    current = String(clean(p));
+    fresh = false;
+    render();
+  }
+
+  function backspace() {
+    if (error) { resetIfError(); render(); return; }
+    if (fresh) return;
+    current = current.length > 1 && !(current.length === 2 && current.startsWith('-'))
+      ? current.slice(0, -1)
+      : '0';
+    render();
+  }
+
+  document.querySelector('.keys').addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    if (b.dataset.fn) applyFn(b.dataset.fn);
+    else if (b.dataset.digit !== undefined) inputDigit(b.dataset.digit);
+    else if (b.dataset.op) chooseOperator(b.dataset.op);
+    else {
+      const a = b.dataset.action;
+      if (a === 'decimal') inputDecimal();
+      if (a === 'equals') equals();
+      if (a === 'clear') clearAll();
+      if (a === 'sign') toggleSign();
+      if (a === 'percent') percent();
+    }
+  });
+
+  function flash(selector) {
+    const el = document.querySelector(selector);
+    if (!el) return;
+    el.classList.add('pressed');
+    setTimeout(() => el.classList.remove('pressed'), 90);
+  }
+
+  document.addEventListener('keydown', e => {
+    if (activeTab !== 'calc') return;
+    if (e.target.closest && e.target.closest('.tabs')) return;
+    const k = e.key;
+    if (/^[0-9]$/.test(k)) { inputDigit(k); flash(`[data-digit="${k}"]`); }
+    else if (k === ',' || k === '.') { inputDecimal(); flash('[data-action="decimal"]'); }
+    else if (['+', '-', '*', '/'].includes(k)) { e.preventDefault(); chooseOperator(k); flash(`[data-op="${k}"]`); }
+    else if (k === 'Enter' || k === '=') { e.preventDefault(); equals(); flash('[data-action="equals"]'); }
+    else if (k === 'Backspace') backspace();
+    else if (k === 'Escape' || k === 'Delete') { clearAll(); flash('[data-action="clear"]'); }
+    else if (k === '%') { percent(); flash('[data-action="percent"]'); }
+  });
+
+  render();
+
+  // ---------- Faner ----------
+  let activeTab = 'calc';
+  const tabButtons = document.querySelectorAll('.tabs button');
+  const pages = { calc: 'page-calc', images: 'page-images', tables: 'page-tables' };
+  function showTab(name) {
+    activeTab = name;
+    tabButtons.forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === name)));
+    Object.entries(pages).forEach(([k, id]) => { document.getElementById(id).hidden = k !== name; });
+  }
+  tabButtons.forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
+
+  // ---------- Lagring ----------
+  const MAX_ROWS = 200;
+  let collection = null;   // databasens samling for denne brukeren
+  let rows = [];           // [{id, uttrykk, resultat, tidspunkt}], nyeste først
+  let localCounter = 0;
+
+  const timeFmt = new Intl.DateTimeFormat('nb-NO', { dateStyle: 'short', timeStyle: 'medium' });
+
+  async function record(uttrykk, resultat) {
+    const row = { uttrykk, resultat, tidspunkt: Date.now() };
+    if (!collection) {
+      rows.unshift({ id: 'lokal-' + (++localCounter), ...row });
+      rows = rows.slice(0, MAX_ROWS);
+      renderData();
+      return;
+    }
+    try {
+      await collection.add(row);
+      if (rows.length >= MAX_ROWS) {
+        const extra = rows.slice(MAX_ROWS - 1);
+        for (const old of extra) await collection.doc(old.id).delete();
+      }
+    } catch (err) {
+      setStatus(err && err.code === 'quota_exceeded'
+        ? 'Databasen er full. Tøm historikken for å lagre nye utregninger.'
+        : 'Utregningen ble ikke lagret. Prøv igjen senere.');
+    }
+  }
+
+  function setStatus(text) {
+    document.getElementById('tableStatus').textContent = text;
+  }
+
+  function renderData() {
+    const list = document.getElementById('historyList');
+    const body = document.getElementById('tableBody');
+    list.replaceChildren();
+    body.replaceChildren();
+    document.getElementById('historyEmpty').hidden = rows.length > 0;
+    document.getElementById('clearHistory').hidden = rows.length === 0;
+
+    rows.forEach(row => {
+      const li = document.createElement('li');
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.setAttribute('aria-label', `${row.uttrykk} ${showNumber(row.resultat)}. Bruk resultatet`);
+      const e1 = document.createElement('span'); e1.className = 'h-expr'; e1.textContent = row.uttrykk;
+      const e2 = document.createElement('span'); e2.className = 'h-res'; e2.textContent = showNumber(row.resultat);
+      const e3 = document.createElement('span'); e3.className = 'h-time'; e3.textContent = timeFmt.format(row.tidspunkt);
+      btn.append(e1, e2, e3);
+      btn.addEventListener('click', () => useResult(row.resultat));
+      li.append(btn);
+      list.append(li);
+
+      const tr = document.createElement('tr');
+      [row.id, row.uttrykk, String(row.resultat).replace('.', ','), timeFmt.format(row.tidspunkt)].forEach((v, i) => {
+        const td = document.createElement('td');
+        td.textContent = v;
+        if (i === 2) td.className = 'num';
+        tr.append(td);
+      });
+      body.append(tr);
+    });
+    if (!rows.length) {
+      const tr = document.createElement('tr');
+      const td = document.createElement('td');
+      td.colSpan = 4; td.textContent = 'Tabellen er tom.'; td.style.color = 'var(--screen-dim)';
+      tr.append(td); body.append(tr);
+    }
+  }
+
+  function useResult(value) {
+    error = false;
+    current = String(value);
+    fresh = true;
+    justApplied = previous !== null && !!operator;
+    if (!justApplied) exprEl.dataset.done = '';
+    render();
+    showTab('calc');
+  }
+
+  document.getElementById('clearHistory').addEventListener('click', async () => {
+    if (!confirm('Vil du slette hele historikken? Dette kan ikke angres.')) return;
+    if (!collection) { rows = []; renderData(); return; }
+    const ids = rows.map(r => r.id);
+    try {
+      for (const id of ids) await collection.doc(id).delete();
+    } catch (err) {
+      setStatus('Noe av historikken ble ikke slettet. Prøv igjen.');
+    }
+  });
+
+  function offline(reason) {
+    document.getElementById('historyNote').textContent =
+      reason + ' Historikken gjelder bare til du lukker siden.';
+    document.getElementById('tablePath').textContent = '(bare i minnet)';
+    renderData();
+  }
+
+  renderData();
+
+  // ---------- Bilder ----------
+  const dropzone = document.getElementById('dropzone');
+  const fileInput = document.getElementById('fileInput');
+  const imgStatus = document.getElementById('imgStatus');
+  let assetsApi = null;     // null = denne personen kan ikke laste opp
+  let galleryCol = null;    // samlingen bilder
+  let galleryRows = [];     // alle opplastede bilder, nyeste først
+  let myId = null;
+  let amOwner = false;
+  let canUpload = true;     // lokal visning inntil vi vet mer
+  let online = false;
+  let busy = false;
+  const RECENT = 6;
+
+  function fmtSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + ' kB';
+    return (bytes / 1024 / 1024).toFixed(1).replace('.', ',') + ' MB';
+  }
+  function galleryUrl(row) { return row.lokalUrl || '/_blob/' + row.bildeId; }
+  function isMdRow(row) { return row.type === 'text/markdown'; }
+  function isMdFile(f) { return f.type === 'text/markdown' || /\.(md|markdown)$/i.test(f.name); }
+  const textCache = new Map();
+  async function getText(row) {
+    if (row.lokalTekst !== undefined) return row.lokalTekst;
+    if (textCache.has(row.bildeId)) return textCache.get(row.bildeId);
+    const p = fetch(galleryUrl(row)).then(r => { if (!r.ok) throw new Error(r.status); return r.text(); });
+    textCache.set(row.bildeId, p);
+    p.catch(() => textCache.delete(row.bildeId));
+    return p;
+  }
+  function excerpt(text) {
+    return text.replace(/```[\s\S]*?```/g, ' ').replace(/<[^>]*>/g, ' ').replace(/\]\([^)]*\)/g, ']').replace(/[#>*_`\[\]()!|-]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 160);
+  }
+  function isMine(row) { return row.lastetOppAv === 'meg' || (myId && row.lastetOppAv === myId); }
+  function uploaderLabel(row) { return !row.lastetOppAv ? 'ukjent' : isMine(row) ? 'deg' : 'en kollega'; }
+  function canDelete(row) { return !online || amOwner || isMine(row); }
+
+  function renderUploader() {
+    dropzone.disabled = !canUpload;
+    document.getElementById('dropText').textContent = canUpload
+      ? 'Trykk her eller dra bilder og Markdown-filer hit. Du kan velge flere samtidig.'
+      : 'Du trenger redigeringstilgang til artifacten for å laste opp filer. Spør den som eier den.';
+  }
+
+  function thumbButton(row, cls) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = cls;
+    b.setAttribute('aria-label', 'Åpne ' + row.filnavn);
+    if (isMdRow(row)) {
+      const card = document.createElement('span'); card.className = 'md-card';
+      const badge = document.createElement('span'); badge.className = 'md-badge'; badge.textContent = 'MD';
+      const ex = document.createElement('span'); ex.className = 'md-excerpt';
+      card.append(badge, ex);
+      b.append(card);
+      getText(row).then(t => { ex.textContent = excerpt(t) || '(tom fil)'; }).catch(() => { ex.textContent = ''; });
+    } else {
+      const img = document.createElement('img');
+      img.src = galleryUrl(row); img.alt = ''; img.loading = 'lazy';
+      b.append(img);
+    }
+    b.addEventListener('click', () => openLightbox(row));
+    return b;
+  }
+
+  function renderGallery() {
+    // Siste opplastinger på startsiden
+    const recent = document.getElementById('recent');
+    recent.replaceChildren();
+    galleryRows.slice(0, RECENT).forEach(row => {
+      const li = document.createElement('li');
+      li.append(thumbButton(row, 'thumb'));
+      recent.append(li);
+    });
+    document.getElementById('recentWrap').hidden = galleryRows.length === 0;
+    document.getElementById('seeAll').textContent = `Se alle filer (${galleryRows.length})`;
+
+    // Bilder-siden
+    const list = document.getElementById('gallery');
+    const tbody = document.getElementById('galleryTableBody');
+    list.replaceChildren();
+    tbody.replaceChildren();
+    document.getElementById('galleryEmpty').hidden = galleryRows.length > 0;
+
+    galleryRows.forEach(row => {
+      const li = document.createElement('li');
+      const meta = document.createElement('div');
+      meta.className = 'g-meta';
+      const name = document.createElement('div'); name.className = 'g-name'; name.textContent = row.filnavn; name.title = row.filnavn;
+      const sub = document.createElement('div'); sub.className = 'g-sub';
+      sub.textContent = `${timeFmt.format(row.lastetOpp)} · ${fmtSize(row.storrelse)} · av ${uploaderLabel(row)}`;
+      meta.append(name, sub);
+      li.append(thumbButton(row, 'thumb'), meta);
+
+      if (canDelete(row) && (canUpload || !online)) {
+        const actions = document.createElement('div');
+        actions.className = 'g-actions';
+        const del = document.createElement('button');
+        del.type = 'button'; del.textContent = 'Slett';
+        del.setAttribute('aria-label', 'Slett ' + row.filnavn);
+        del.addEventListener('click', () => deleteImage(row));
+        actions.append(del);
+        li.append(actions);
+      }
+      list.append(li);
+
+      const tr = document.createElement('tr');
+      [row.bildeId, row.filnavn, row.type, fmtSize(row.storrelse), timeFmt.format(row.lastetOpp), uploaderLabel(row)]
+        .forEach(v => { const td = document.createElement('td'); td.textContent = v; tr.append(td); });
+      tbody.append(tr);
+    });
+    if (!galleryRows.length) {
+      const tr = document.createElement('tr');
+      const td = document.createElement('td');
+      td.colSpan = 6; td.textContent = 'Tabellen er tom.'; td.style.color = 'var(--screen-dim)';
+      tr.append(td); tbody.append(tr);
+    }
+  }
+
+  function pickFiles() {
+    if (!canUpload || busy) return;
+    fileInput.click();
+  }
+
+  async function handleFiles(fileList) {
+    if (busy) return;
+    const files = [...(fileList || [])];
+    if (!files.length) return;
+    const images = files.filter(f => f.type.startsWith('image/') || isMdFile(f));
+    const skipped = [];
+    if (images.length < files.length) skipped.push(`${files.length - images.length} fil(er) ble hoppet over fordi bare bilder og Markdown støttes`);
+
+    busy = true;
+    let ok = 0;
+    for (let i = 0; i < images.length; i++) {
+      const file = images[i];
+      const md = isMdFile(file);
+      const limit = file.type === 'image/svg+xml' ? 2 : 20;
+      if (file.size > limit * 1024 * 1024) { skipped.push(`${file.name} er større enn ${limit} MB`); continue; }
+      imgStatus.textContent = images.length > 1 ? `Laster opp ${i + 1} av ${images.length} …` : 'Laster opp …';
+
+      if (!online) {
+        const row = { bildeId: 'lokal-' + Date.now() + '-' + i, lokalUrl: URL.createObjectURL(file), filnavn: file.name, type: md ? 'text/markdown' : file.type, storrelse: file.size, lastetOpp: Date.now(), lastetOppAv: 'meg' };
+        if (md) row.lokalTekst = await file.text();
+        galleryRows.unshift(row);
+        ok++;
+        continue;
+      }
+      try {
+        const res = md ? await assetsApi.upload(file, { type: 'text/markdown' }) : await assetsApi.upload(file);
+        const row = { bildeId: res.id, filnavn: file.name, type: res.contentType, storrelse: res.sizeBytes, lastetOpp: Date.now() };
+        if (myId) row.lastetOppAv = myId;
+        await galleryCol.doc(res.id).set(row);
+        ok++;
+      } catch (err) {
+        const code = err && err.code;
+        const why =
+          code === 'too_large' ? 'er for stort' :
+          code === 'unsupported_type' ? 'har en filtype som ikke støttes' :
+          code === 'invalid_request' && md ? 'må være lagret som UTF-8-tekst' :
+          code === 'quota_or_state' ? 'fikk ikke plass, lagringen er full' :
+          code === 'rate_limited' ? 'ble stoppet fordi det gikk for fort, prøv igjen om litt' :
+          code === 'not_granted' ? 'kunne ikke lastes opp, du mangler redigeringstilgang' :
+          'feilet';
+        skipped.push(`${file.name} ${why}`);
+        if (code === 'quota_or_state' || code === 'not_granted') break;
+      }
+    }
+    busy = false;
+    fileInput.value = '';
+    if (!online) renderGallery();
+    let msg = ok ? `${ok} ${ok === 1 ? 'fil' : 'filer'} lastet opp.` : 'Ingen filer ble lastet opp.';
+    if (!online && ok) msg += ' De vises bare her og lagres ikke.';
+    if (skipped.length) msg += ' ' + skipped.join('. ') + '.';
+    imgStatus.textContent = msg;
+  }
+
+  dropzone.addEventListener('click', pickFiles);
+  fileInput.addEventListener('change', () => handleFiles(fileInput.files));
+  ['dragenter', 'dragover'].forEach(t => dropzone.addEventListener(t, e => {
+    if (!canUpload) return;
+    e.preventDefault();
+    dropzone.classList.add('drag');
+  }));
+  ['dragleave', 'drop'].forEach(t => dropzone.addEventListener(t, e => {
+    e.preventDefault();
+    dropzone.classList.remove('drag');
+    if (t === 'drop' && canUpload) handleFiles(e.dataTransfer.files);
+  }));
+  document.getElementById('seeAll').addEventListener('click', () => showTab('images'));
+
+  const lightbox = document.getElementById('lightbox');
+  let lastFocus = null;
+  function renderMarkdown(text) {
+    const view = document.getElementById('docView');
+    if (window.marked && window.DOMPurify) {
+      view.innerHTML = DOMPurify.sanitize(marked.parse(text));
+      view.querySelectorAll('a').forEach(a => { a.target = '_blank'; a.rel = 'noopener noreferrer'; });
+    } else {
+      view.replaceChildren();
+      const pre = document.createElement('div'); pre.className = 'doc-plain'; pre.textContent = text;
+      view.append(pre);
+    }
+  }
+
+  function openLightbox(row) {
+    lastFocus = document.activeElement;
+    const imgEl = document.getElementById('lightboxImg');
+    const view = document.getElementById('docView');
+    const md = isMdRow(row);
+    imgEl.hidden = md;
+    view.hidden = !md;
+    if (md) {
+      imgEl.removeAttribute('src');
+      view.textContent = 'Henter …';
+      view.scrollTop = 0;
+      getText(row).then(renderMarkdown).catch(() => { view.textContent = 'Klarte ikke å hente filen.'; });
+    } else {
+      imgEl.src = galleryUrl(row);
+      imgEl.alt = row.filnavn;
+    }
+    document.getElementById('lightboxCap').textContent = `${row.filnavn} · ${timeFmt.format(row.lastetOpp)} · av ${uploaderLabel(row)}`;
+    lightbox.hidden = false;
+    document.getElementById('lightboxClose').focus();
+  }
+  function closeLightbox() {
+    lightbox.hidden = true;
+    if (lastFocus) lastFocus.focus();
+  }
+  document.getElementById('lightboxClose').addEventListener('click', closeLightbox);
+  lightbox.addEventListener('click', e => { if (e.target === lightbox) closeLightbox(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !lightbox.hidden) closeLightbox(); });
+
+  async function deleteImage(row) {
+    if (!confirm(`Vil du slette «${row.filnavn}» for godt? Dette kan ikke angres.`)) return;
+    textCache.delete(row.bildeId);
+    if (!online) {
+      galleryRows = galleryRows.filter(r => r !== row);
+      if (row.lokalUrl) URL.revokeObjectURL(row.lokalUrl);
+      renderGallery();
+      return;
+    }
+    try {
+      await galleryCol.doc(row.bildeId).delete();
+      await assetsApi.delete(row.bildeId);
+    } catch (e) {
+      document.getElementById('galleryNote').textContent = 'Klarte ikke å slette filen. Prøv igjen.';
+    }
+  }
+
+  // Tar med bilder som ligger i fillageret uten å stå i tabellen (fra tidligere versjoner)
+  async function adoptExisting(firstRows) {
+    if (!assetsApi) return;
+    const known = new Set(firstRows.map(r => r.bildeId));
+    try {
+      const { assets } = await assetsApi.list();
+      for (const a of assets) {
+        if (known.has(a.id) || !(a.contentType.startsWith('image/') || a.contentType === 'text/markdown')) continue;
+        await galleryCol.doc(a.id).set({
+          bildeId: a.id, filnavn: '(ukjent filnavn)', type: a.contentType,
+          storrelse: a.sizeBytes, lastetOpp: Date.parse(a.createdAt) || Date.now()
+        });
+      }
+    } catch (e) { /* ikke kritisk */ }
+  }
+
+  renderUploader();
+  renderGallery();
+
+  async function initImages(db, user) {
+    online = true;
+    assetsApi = await window.claude.use('assets');
+    canUpload = !!assetsApi;
+    if (user) amOwner = await user.isOwner();
+    document.getElementById('imgNote').textContent = canUpload
+      ? 'Bilder og Markdown-filer lagres i artifactens fillager og vises for alle som åpner den.'
+      : 'Filene som er lastet opp vises for alle, men bare de med redigeringstilgang kan laste opp nye.';
+    renderUploader();
+    galleryCol = db.collection('bilder');
+    let first = true;
+    galleryCol.orderBy('lastetOpp', 'desc').onSnapshot(snap => {
+      galleryRows = snap.docs.map(d => d.data());
+      renderGallery();
+      if (first && !snap.metadata.fromCache) { first = false; adoptExisting(galleryRows); }
+    }, () => {
+      document.getElementById('galleryNote').textContent = 'Mistet kontakten med fillageret.';
+    });
+  }
+
+  (async () => {
+    if (!window.claude || !window.claude.use) {
+      document.getElementById('imgNote').textContent = 'Lagring er ikke tilgjengelig her. Filer du velger vises bare til du lukker siden.';
+      offline('Databasen er ikke tilgjengelig her.');
+      return;
+    }
+    const [db, user] = await Promise.all([window.claude.use('db'), window.claude.use('user')]);
+    if (user) myId = await user.id();
+    if (db) initImages(db, user);
+    else document.getElementById('imgNote').textContent = 'Lagring er ikke tilgjengelig her. Filer du velger vises bare til du lukker siden.';
+    if (!db || !user) { offline('Databasen er ikke tilgjengelig i denne visningen.'); return; }
+    const uid = myId;
+    if (!uid) { offline('Du må være logget inn for å lagre historikk.'); return; }
+    collection = db.collection('data/users/' + uid);
+    document.getElementById('tablePath').textContent = 'data/users/<din id>';
+    setStatus('Kobler til databasen …');
+    collection.orderBy('tidspunkt', 'desc').limit(MAX_ROWS + 20).onSnapshot(snap => {
+      rows = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setStatus(`${rows.length} ${rows.length === 1 ? 'rad' : 'rader'} i databasen.`);
+      renderData();
+    }, err => {
+      collection = null;
+      offline('Mistet kontakten med databasen.');
+    });
+  })();
+</script>
+</body>
+</html>

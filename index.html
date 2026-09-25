@@ -42,13 +42,17 @@
     <h1>Test av iframe</h1>
     <a href="https://claude.ai/artifact/8ucvmbQXv1xERtdn2a9224" target="_blank" rel="noopener noreferrer">Åpne artifacten i egen fane</a>
   </header>
+  <!--
+    claude.ai sender Content-Security-Policy: frame-ancestors 'self', så artifacten
+    kan ikke lastes direkte i en iframe fra et annet domene. Derfor ligger en kopi
+    av artifact-HTML-en i kalkulator.html og vises herfra.
+  -->
   <iframe
-    src="https://claude.ai/artifact/8ucvmbQXv1xERtdn2a9224"
-    title="Kalkulator (Claude-artifact)"
+    src="kalkulator.html"
+    title="Kalkulator (kopi av Claude-artifact)"
     allow="clipboard-write"
-    loading="eager"
-    referrerpolicy="no-referrer-when-downgrade">
+    loading="eager">
   </iframe>
-  <p class="fallback">Vises ikke innholdet over, blokkerer claude.ai innbygging i iframe, eller du må være logget inn. Bruk lenken øverst.</p>
+  <p class="fallback">Kopi av artifacten. Historikk og filopplasting virker bare i minnet her, siden Claude sitt lagrings-runtime ikke finnes utenfor claude.ai.</p>
 </body>
 </html>
